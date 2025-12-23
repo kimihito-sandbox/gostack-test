@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/aarondl/opt/omit"
@@ -106,6 +107,7 @@ func main() {
 		// 完了状態を反転して更新
 		err = todo.Update(ctx, db, &models.TodoSetter{
 			Completed: omit.From(!todo.Completed),
+			UpdatedAt: omit.From(time.Now()),
 		})
 		if err != nil {
 			return err
@@ -139,4 +141,3 @@ func render(c echo.Context, statusCode int, t templ.Component) error {
 	c.Response().WriteHeader(statusCode)
 	return t.Render(c.Request().Context(), c.Response())
 }
-

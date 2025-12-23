@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "godevmcp": {
+      "type": "stdio",
+      "command": "go",
+      "args": [
+        "tool",
+        "godevmcp",
+        "serve"
+      ],
+      "env": {}
+    }
+  }
+}
