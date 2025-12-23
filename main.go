@@ -117,7 +117,7 @@ func main() {
 		CookiePath:     "/",                    // Cookie適用パス（全体）
 		CookieSecure:   false,                  // 開発環境ではfalse、本番ではtrue
 		CookieHTTPOnly: true,                   // JavaScriptからアクセス不可
-		CookieSameSite: http.SameSiteLaxMode,   // Laxモードに緩和
+		CookieSameSite: http.SameSiteStrictMode, // CSRF対策を強化
 	}))
 
 	// ViteタグをContextに注入するミドルウェア
