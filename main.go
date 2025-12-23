@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	"github.com/pressly/goose/v3"
 	"github.com/stephenafamo/bob"
 	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
@@ -29,6 +30,15 @@ func main() {
 		panic(err)
 	}
 	defer sqlDB.Close()
+
+	// マイグレーション実行
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		panic(err)
+	}
+	if err := goose.Up(sqlDB, "db/migrations"); err != nil {
+		panic(err)
+	}
+
 	db := bob.NewDB(sqlDB)
 
 	// セッションマネージャーの初期化（SQLiteストア）
