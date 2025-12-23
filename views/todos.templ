@@ -12,8 +12,8 @@ templ TodoIndex(todos []*models.Todo, csrfToken string) {
 		<!-- 新規作成フォーム -->
 		<form
 			hx-post="/todos"
-			hx-target="#todo-list"
-			hx-swap="innerHTML"
+			hx-target="#todo-items"
+			hx-swap="beforeend"
 			hx-on::after-request="this.reset()"
 		>
 			<input type="hidden" name="csrf_token" value={ csrfToken }/>
@@ -33,52 +33,51 @@ templ TodoIndex(todos []*models.Todo, csrfToken string) {
 // TodoList はTodo一覧部分のみ（HTMX部分更新用）
 templ TodoList(todos []*models.Todo, csrfToken string) {
 	if len(todos) == 0 {
-		<p>Todoはありません</p>
-	} else {
-		<ul>
-			for _, todo := range todos {
-				<li>
-					@TodoItem(todo, csrfToken)
-				</li>
-			}
-		</ul>
+		<p id="empty-message">Todoはありません</p>
 	}
+	<ul id="todo-items">
+		for _, todo := range todos {
+			@TodoItem(todo, csrfToken)
+		}
+	</ul>
 }
 
 templ TodoItem(todo *models.Todo, csrfToken string) {
-	<article style="display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0;">
-		<!-- 完了状態の切り替え -->
-		<form
-			hx-post={ "/todos/" + strconv.FormatInt(todo.ID, 10) + "/toggle" }
-			hx-target="#todo-list"
-			hx-swap="innerHTML"
-			style="margin: 0;"
-		>
-			<input type="hidden" name="csrf_token" value={ csrfToken }/>
+	<li id={ "todo-" + strconv.FormatInt(todo.ID, 10) }>
+		<article style="display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0;">
+			<!-- 完了状態の切り替え -->
+			<form
+				hx-post={ "/todos/" + strconv.FormatInt(todo.ID, 10) + "/toggle" }
+				hx-target={ "#todo-" + strconv.FormatInt(todo.ID, 10) }
+				hx-swap="outerHTML"
+				style="margin: 0;"
+			>
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				if todo.Completed {
+					<button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;">✅</button>
+				} else {
+					<button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;">⬜</button>
+				}
+			</form>
+
+			<!-- タイトル -->
 			if todo.Completed {
-				<button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;">✅</button>
+				<span style="text-decoration: line-through; color: gray;">{ todo.Title }</span>
 			} else {
-				<button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;">⬜</button>
+				<span>{ todo.Title }</span>
 			}
-		</form>
 
-		<!-- タイトル -->
-		if todo.Completed {
-			<span style="text-decoration: line-through; color: gray;">{ todo.Title }</span>
-		} else {
-			<span>{ todo.Title }</span>
-		}
-
-		<!-- 削除ボタン -->
-		<form
-			hx-post={ "/todos/" + strconv.FormatInt(todo.ID, 10) + "/delete" }
-			hx-target="#todo-list"
-			hx-swap="innerHTML"
-			hx-confirm="本当に削除しますか？"
-			style="margin: 0;"
-		>
-			<input type="hidden" name="csrf_token" value={ csrfToken }/>
-			<button type="submit" style="background: #dc3545; border: none; cursor: pointer;">削除</button>
-		</form>
-	</article>
+			<!-- 削除ボタン -->
+			<form
+				hx-post={ "/todos/" + strconv.FormatInt(todo.ID, 10) + "/delete" }
+				hx-target={ "#todo-" + strconv.FormatInt(todo.ID, 10) }
+				hx-swap="delete"
+				hx-confirm="本当に削除しますか？"
+				style="margin: 0;"
+			>
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<button type="submit" style="background: #dc3545; border: none; cursor: pointer;">削除</button>
+			</form>
+		</article>
+	</li>
 }

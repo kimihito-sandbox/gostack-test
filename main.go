@@ -77,13 +77,14 @@ func main() {
 		if title == "" {
 			return c.Redirect(http.StatusFound, "/todos")
 		}
-		_, err := models.Todos.Insert(&models.TodoSetter{
+		todo, err := models.Todos.Insert(&models.TodoSetter{
 			Title: omit.From(title),
-		}).Exec(ctx, db)
+		}).One(ctx, db) // 作成したTodoを取得
 		if err != nil {
 			return err
 		}
-		return renderTodoList(c, ctx, db)
+		csrfToken := c.Get("csrf").(string)
+		return render(c, http.StatusOK, views.TodoItem(todo, csrfToken))
 	})
 
 	// Todo完了状態の切り替え
@@ -109,7 +110,8 @@ func main() {
 		if err != nil {
 			return err
 		}
-		return renderTodoList(c, ctx, db)
+		csrfToken := c.Get("csrf").(string)
+		return render(c, http.StatusOK, views.TodoItem(todo, csrfToken))
 	})
 
 	// Todo削除
@@ -125,7 +127,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		return renderTodoList(c, ctx, db)
+		return c.NoContent(http.StatusOK) // hx-swap="delete"なのでレスポンス不要
 	})
 
 	e.Logger.Fatal(e.Start(":8080"))
@@ -138,12 +140,3 @@ func render(c echo.Context, statusCode int, t templ.Component) error {
 	return t.Render(c.Request().Context(), c.Response())
 }
 
-// renderTodoList はTodo一覧部分のみを返す（HTMX部分更新用）
-func renderTodoList(c echo.Context, ctx context.Context, db bob.DB) error {
-	todos, err := models.Todos.Query().All(ctx, db)
-	if err != nil {
-		return err
-	}
-	csrfToken := c.Get("csrf").(string)
-	return render(c, http.StatusOK, views.TodoList(todos, csrfToken))
-}
