@@ -3,9 +3,12 @@ package main
 import (
 	"net/http"
 
+	"github.com/a-h/templ"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+
+	"github.com/kimihito-sandbox/gostack-test/views"
 )
 
 func main() {
@@ -29,8 +32,15 @@ func main() {
 	e.Use(middleware.Recover())
 
 	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
+		return render(c, http.StatusOK, views.Hello("World"))
 	})
 
 	e.Logger.Fatal(e.Start(":8080"))
+}
+
+// render はTemplコンポーネントをEchoのレスポンスとして返すヘルパー関数
+func render(c echo.Context, statusCode int, t templ.Component) error {
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
+	c.Response().WriteHeader(statusCode)
+	return t.Render(c.Request().Context(), c.Response())
 }
