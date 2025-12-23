@@ -1,0 +1,4 @@
+sqlite:
+  dsn: "db/app.db"
+output:
+  folder: "models"
