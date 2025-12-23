@@ -1,5 +1,7 @@
 package views
 
+import "github.com/olivere/vite"
+
 templ Layout(title string) {
 	<!DOCTYPE html>
 	<html lang="ja">
@@ -7,10 +9,7 @@ templ Layout(title string) {
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title }</title>
-			<!-- Pico CSS -->
-			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
-			<!-- HTMX -->
-			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			@templ.Raw(vite.ScriptsFromContext(ctx))
 		</head>
 		<body>
 			<main class="container">

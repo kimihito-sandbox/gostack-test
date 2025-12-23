@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"database/sql"
+	"embed"
+	"io/fs"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -14,6 +17,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	"github.com/olivere/vite"
 	"github.com/pressly/goose/v3"
 	"github.com/stephenafamo/bob"
 	"golang.org/x/crypto/bcrypt"
@@ -22,6 +26,9 @@ import (
 	"github.com/kimihito-sandbox/gostack-test/models"
 	"github.com/kimihito-sandbox/gostack-test/views"
 )
+
+//go:embed all:frontend/dist
+var distFS embed.FS
 
 func main() {
 	// DB接続
@@ -48,6 +55,40 @@ func main() {
 
 	e := echo.New()
 	e.Logger.SetLevel(log.DEBUG)
+
+	// Vite設定
+	isDev := os.Getenv("VITE_DEV") == "true"
+	var viteConfig vite.Config
+	if isDev {
+		viteConfig = vite.Config{
+			FS:           os.DirFS("./frontend"),
+			IsDev:        true,
+			ViteURL:      "http://localhost:5173",
+			ViteEntry:    "src/main.js",
+			ViteTemplate: vite.Vanilla,
+		}
+	} else {
+		subFS, err := fs.Sub(distFS, "frontend/dist")
+		if err != nil {
+			panic(err)
+		}
+		viteConfig = vite.Config{
+			FS:           subFS,
+			IsDev:        false,
+			ViteTemplate: vite.Vanilla,
+		}
+	}
+
+	viteFragment, err := vite.HTMLFragment(viteConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	// Viteアセットハンドラー（本番モードのみ）
+	if !isDev {
+		assetsFS, _ := fs.Sub(distFS, "frontend/dist/assets")
+		e.StaticFS("/assets", echo.MustSubFS(assetsFS, "."))
+	}
 
 	// ミドルウェア
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -77,6 +118,15 @@ func main() {
 		CookieHTTPOnly: true,                    // JavaScriptからアクセス不可
 		CookieSameSite: http.SameSiteStrictMode, // CSRF対策を強化
 	}))
+
+	// ViteタグをContextに注入するミドルウェア
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			ctx := vite.ScriptsToContext(c.Request().Context(), string(viteFragment.Tags))
+			c.SetRequest(c.Request().WithContext(ctx))
+			return next(c)
+		}
+	})
 
 	// ルーティング
 	e.GET("/", func(c echo.Context) error {
