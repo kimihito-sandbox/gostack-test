@@ -10,7 +10,12 @@ templ TodoIndex(todos []*models.Todo, csrfToken string) {
 		<h1>Todos</h1>
 
 		<!-- 新規作成フォーム -->
-		<form method="POST" action="/todos">
+		<form
+			hx-post="/todos"
+			hx-target="#todo-list"
+			hx-swap="innerHTML"
+			hx-on::after-request="this.reset()"
+		>
 			<input type="hidden" name="csrf_token" value={ csrfToken }/>
 			<fieldset role="group">
 				<input type="text" name="title" placeholder="新しいTodoを入力..." required/>
@@ -19,24 +24,36 @@ templ TodoIndex(todos []*models.Todo, csrfToken string) {
 		</form>
 
 		<!-- Todo一覧 -->
-		if len(todos) == 0 {
-			<p>Todoはありません</p>
-		} else {
-			<ul>
-				for _, todo := range todos {
-					<li>
-						@TodoItem(todo, csrfToken)
-					</li>
-				}
-			</ul>
-		}
+		<div id="todo-list">
+			@TodoList(todos, csrfToken)
+		</div>
+	}
+}
+
+// TodoList はTodo一覧部分のみ（HTMX部分更新用）
+templ TodoList(todos []*models.Todo, csrfToken string) {
+	if len(todos) == 0 {
+		<p>Todoはありません</p>
+	} else {
+		<ul>
+			for _, todo := range todos {
+				<li>
+					@TodoItem(todo, csrfToken)
+				</li>
+			}
+		</ul>
 	}
 }
 
 templ TodoItem(todo *models.Todo, csrfToken string) {
 	<article style="display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0;">
 		<!-- 完了状態の切り替え -->
-		<form method="POST" action={ templ.SafeURL("/todos/" + strconv.FormatInt(todo.ID, 10) + "/toggle") } style="margin: 0;">
+		<form
+			hx-post={ "/todos/" + strconv.FormatInt(todo.ID, 10) + "/toggle" }
+			hx-target="#todo-list"
+			hx-swap="innerHTML"
+			style="margin: 0;"
+		>
 			<input type="hidden" name="csrf_token" value={ csrfToken }/>
 			if todo.Completed {
 				<button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;">✅</button>
@@ -53,7 +70,13 @@ templ TodoItem(todo *models.Todo, csrfToken string) {
 		}
 
 		<!-- 削除ボタン -->
-		<form method="POST" action={ templ.SafeURL("/todos/" + strconv.FormatInt(todo.ID, 10) + "/delete") } style="margin: 0;">
+		<form
+			hx-post={ "/todos/" + strconv.FormatInt(todo.ID, 10) + "/delete" }
+			hx-target="#todo-list"
+			hx-swap="innerHTML"
+			hx-confirm="本当に削除しますか？"
+			style="margin: 0;"
+		>
 			<input type="hidden" name="csrf_token" value={ csrfToken }/>
 			<button type="submit" style="background: #dc3545; border: none; cursor: pointer;">削除</button>
 		</form>
