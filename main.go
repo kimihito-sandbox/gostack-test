@@ -112,11 +112,12 @@ func main() {
 
 	// CSRFミドルウェア
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
-		TokenLookup:    "form:csrf_token",       // フォームからトークンを取得
-		CookieName:     "_csrf",                 // Cookieの名前
-		CookieSecure:   false,                   // 開発環境ではfalse、本番ではtrue
-		CookieHTTPOnly: true,                    // JavaScriptからアクセス不可
-		CookieSameSite: http.SameSiteStrictMode, // CSRF対策を強化
+		TokenLookup:    "form:csrf_token",      // フォームからトークンを取得
+		CookieName:     "_csrf",                // Cookieの名前
+		CookiePath:     "/",                    // Cookie適用パス（全体）
+		CookieSecure:   false,                  // 開発環境ではfalse、本番ではtrue
+		CookieHTTPOnly: true,                   // JavaScriptからアクセス不可
+		CookieSameSite: http.SameSiteLaxMode,   // Laxモードに緩和
 	}))
 
 	// ViteタグをContextに注入するミドルウェア
