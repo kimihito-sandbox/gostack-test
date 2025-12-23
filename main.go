@@ -23,12 +23,45 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
 
+	z "github.com/Oudwins/zog"
+	"github.com/Oudwins/zog/zhttp"
 	"github.com/kimihito-sandbox/gostack-test/models"
 	"github.com/kimihito-sandbox/gostack-test/views"
 )
 
 //go:embed all:frontend/dist
 var distFS embed.FS
+
+// バリデーション用の構造体とスキーマ
+type LoginInput struct {
+	Email    string `zog:"email"`
+	Password string `zog:"password"`
+}
+
+var loginSchema = z.Struct(z.Shape{
+	"Email":    z.String().Required(z.Message("メールアドレスは必須です")).Email(z.Message("有効なメールアドレスを入力してください")),
+	"Password": z.String().Required(z.Message("パスワードは必須です")),
+})
+
+type RegisterInput struct {
+	Email           string `zog:"email"`
+	Password        string `zog:"password"`
+	ConfirmPassword string `zog:"confirm_password"`
+}
+
+var registerSchema = z.Struct(z.Shape{
+	"Email":           z.String().Required(z.Message("メールアドレスは必須です")).Email(z.Message("有効なメールアドレスを入力してください")),
+	"Password":        z.String().Required(z.Message("パスワードは必須です")).Min(8, z.Message("パスワードは8文字以上で入力してください")),
+	"ConfirmPassword": z.String().Required(z.Message("パスワード確認は必須です")),
+})
+
+type TodoInput struct {
+	Title string `zog:"title"`
+}
+
+var todoSchema = z.Struct(z.Shape{
+	"Title": z.String().Required(z.Message("タイトルは必須です")).Min(1, z.Message("タイトルは必須です")),
+})
 
 func main() {
 	// DB接続
@@ -112,11 +145,11 @@ func main() {
 
 	// CSRFミドルウェア
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
-		TokenLookup:    "form:csrf_token",      // フォームからトークンを取得
-		CookieName:     "_csrf",                // Cookieの名前
-		CookiePath:     "/",                    // Cookie適用パス（全体）
-		CookieSecure:   false,                  // 開発環境ではfalse、本番ではtrue
-		CookieHTTPOnly: true,                   // JavaScriptからアクセス不可
+		TokenLookup:    "form:csrf_token",       // フォームからトークンを取得
+		CookieName:     "_csrf",                 // Cookieの名前
+		CookiePath:     "/",                     // Cookie適用パス（全体）
+		CookieSecure:   false,                   // 開発環境ではfalse、本番ではtrue
+		CookieHTTPOnly: true,                    // JavaScriptからアクセス不可
 		CookieSameSite: http.SameSiteStrictMode, // CSRF対策を強化
 	}))
 
@@ -143,7 +176,7 @@ func main() {
 			return c.Redirect(http.StatusFound, "/todos")
 		}
 		csrfToken := c.Get("csrf").(string)
-		return render(c, http.StatusOK, views.LoginPage(csrfToken, ""))
+		return render(c, http.StatusOK, views.LoginPage(csrfToken, nil))
 	})
 
 	// ログイン処理
@@ -151,20 +184,22 @@ func main() {
 		ctx := c.Request().Context()
 		csrfToken := c.Get("csrf").(string)
 
-		email := c.FormValue("email")
-		password := c.FormValue("password")
+		var input LoginInput
+		if issues := loginSchema.Parse(zhttp.Request(c.Request()), &input); len(issues) > 0 {
+			return render(c, http.StatusBadRequest, views.LoginPage(csrfToken, issuesToMap(issues)))
+		}
 
 		// ユーザーを検索
 		user, err := models.Users.Query(
-			models.SelectWhere.Users.Email.EQ(email),
+			models.SelectWhere.Users.Email.EQ(input.Email),
 		).One(ctx, db)
 		if err != nil {
-			return render(c, http.StatusOK, views.LoginPage(csrfToken, "メールアドレスまたはパスワードが正しくありません"))
+			return render(c, http.StatusBadRequest, views.LoginPage(csrfToken, map[string][]string{"_": {"メールアドレスまたはパスワードが正しくありません"}}))
 		}
 
 		// パスワード検証
-		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-			return render(c, http.StatusOK, views.LoginPage(csrfToken, "メールアドレスまたはパスワードが正しくありません"))
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
+			return render(c, http.StatusBadRequest, views.LoginPage(csrfToken, map[string][]string{"_": {"メールアドレスまたはパスワードが正しくありません"}}))
 		}
 
 		// セッションにユーザーIDを保存
@@ -180,7 +215,7 @@ func main() {
 			return c.Redirect(http.StatusFound, "/todos")
 		}
 		csrfToken := c.Get("csrf").(string)
-		return render(c, http.StatusOK, views.RegisterPage(csrfToken, ""))
+		return render(c, http.StatusOK, views.RegisterPage(csrfToken, nil))
 	})
 
 	// 新規登録処理
@@ -188,28 +223,26 @@ func main() {
 		ctx := c.Request().Context()
 		csrfToken := c.Get("csrf").(string)
 
-		email := c.FormValue("email")
-		password := c.FormValue("password")
-		confirmPassword := c.FormValue("confirm_password")
-
-		// バリデーション
-		if email == "" || password == "" {
-			return render(c, http.StatusOK, views.RegisterPage(csrfToken, "メールアドレスとパスワードは必須です"))
+		var input RegisterInput
+		if issues := registerSchema.Parse(zhttp.Request(c.Request()), &input); len(issues) > 0 {
+			return render(c, http.StatusBadRequest, views.RegisterPage(csrfToken, issuesToMap(issues)))
 		}
-		if password != confirmPassword {
-			return render(c, http.StatusOK, views.RegisterPage(csrfToken, "パスワードが一致しません"))
+
+		// パスワード確認チェック
+		if input.Password != input.ConfirmPassword {
+			return render(c, http.StatusBadRequest, views.RegisterPage(csrfToken, map[string][]string{"confirm_password": {"パスワードが一致しません"}}))
 		}
 
 		// 既存ユーザーチェック
 		_, err := models.Users.Query(
-			models.SelectWhere.Users.Email.EQ(email),
+			models.SelectWhere.Users.Email.EQ(input.Email),
 		).One(ctx, db)
 		if err == nil {
-			return render(c, http.StatusOK, views.RegisterPage(csrfToken, "このメールアドレスは既に登録されています"))
+			return render(c, http.StatusBadRequest, views.RegisterPage(csrfToken, map[string][]string{"email": {"このメールアドレスは既に登録されています"}}))
 		}
 
 		// パスワードハッシュ化
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
@@ -217,7 +250,7 @@ func main() {
 		// ユーザー作成
 		now := time.Now()
 		user, err := models.Users.Insert(&models.UserSetter{
-			Email:     omit.From(email),
+			Email:     omit.From(input.Email),
 			Password:  omit.From(string(hashedPassword)),
 			CreatedAt: omit.From(now),
 			UpdatedAt: omit.From(now),
@@ -335,4 +368,16 @@ func requireAuth(sessionManager *scs.SessionManager) echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
+}
+
+// issuesToMap はzogのZogIssueListをフィールドごとのエラーマップに変換する
+func issuesToMap(issues z.ZogIssueList) map[string][]string {
+	errs := make(map[string][]string)
+	for _, issue := range issues {
+		if len(issue.Path) > 0 {
+			key := issue.Path[0]
+			errs[key] = append(errs[key], issue.Message)
+		}
+	}
+	return errs
 }

@@ -1,13 +1,17 @@
 package views
 
 // LoginPage はログインページ
-templ LoginPage(csrfToken string, errorMsg string) {
+templ LoginPage(csrfToken string, errors map[string][]string) {
 	@Layout("ログイン") {
 		<h1>ログイン</h1>
 
-		if errorMsg != "" {
+		if msgs, ok := errors["_"]; ok {
 			<article style="background-color: #ffebee; border-left: 4px solid #f44336; padding: 1rem;">
-				{ errorMsg }
+				<ul style="margin: 0; padding-left: 1.2rem;">
+					for _, msg := range msgs {
+						<li>{ msg }</li>
+					}
+				</ul>
 			</article>
 		}
 
@@ -16,9 +20,15 @@ templ LoginPage(csrfToken string, errorMsg string) {
 
 			<label for="email">メールアドレス</label>
 			<input type="email" id="email" name="email" placeholder="email@example.com" required/>
+			for _, msg := range errors["email"] {
+				<small style="color: #f44336;">{ msg }</small>
+			}
 
 			<label for="password">パスワード</label>
 			<input type="password" id="password" name="password" required/>
+			for _, msg := range errors["password"] {
+				<small style="color: #f44336;">{ msg }</small>
+			}
 
 			<button type="submit">ログイン</button>
 		</form>
@@ -30,13 +40,17 @@ templ LoginPage(csrfToken string, errorMsg string) {
 }
 
 // RegisterPage は新規登録ページ
-templ RegisterPage(csrfToken string, errorMsg string) {
+templ RegisterPage(csrfToken string, errors map[string][]string) {
 	@Layout("新規登録") {
 		<h1>新規登録</h1>
 
-		if errorMsg != "" {
+		if msgs, ok := errors["_"]; ok {
 			<article style="background-color: #ffebee; border-left: 4px solid #f44336; padding: 1rem;">
-				{ errorMsg }
+				<ul style="margin: 0; padding-left: 1.2rem;">
+					for _, msg := range msgs {
+						<li>{ msg }</li>
+					}
+				</ul>
 			</article>
 		}
 
@@ -45,12 +59,21 @@ templ RegisterPage(csrfToken string, errorMsg string) {
 
 			<label for="email">メールアドレス</label>
 			<input type="email" id="email" name="email" placeholder="email@example.com" required/>
+			for _, msg := range errors["email"] {
+				<small style="color: #f44336;">{ msg }</small>
+			}
 
 			<label for="password">パスワード</label>
 			<input type="password" id="password" name="password" required/>
+			for _, msg := range errors["password"] {
+				<small style="color: #f44336;">{ msg }</small>
+			}
 
 			<label for="confirm_password">パスワード（確認）</label>
 			<input type="password" id="confirm_password" name="confirm_password" required/>
+			for _, msg := range errors["confirm_password"] {
+				<small style="color: #f44336;">{ msg }</small>
+			}
 
 			<button type="submit">登録</button>
 		</form>
