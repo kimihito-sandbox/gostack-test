@@ -4,6 +4,7 @@
 package factory
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -13,12 +14,49 @@ import (
 
 var defaultFaker = faker.New()
 
+func random___byte(f *faker.Faker, limits ...string) []byte {
+	if f == nil {
+		f = &defaultFaker
+	}
+
+	return []byte(random_string(f, limits...))
+}
+
 func random_bool(f *faker.Faker, limits ...string) bool {
 	if f == nil {
 		f = &defaultFaker
 	}
 
 	return f.Bool()
+}
+
+func random_float64(f *faker.Faker, limits ...string) float64 {
+	if f == nil {
+		f = &defaultFaker
+	}
+
+	var precision int64 = 5
+	var scale int64 = 2
+
+	if len(limits) > 0 {
+		precision, _ = strconv.ParseInt(limits[0], 10, 32)
+	}
+
+	if len(limits) > 1 {
+		scale, _ = strconv.ParseInt(limits[1], 10, 32)
+	}
+
+	baseVal := f.Float64(10, -1, 1)
+	for baseVal == -1 || baseVal == 0 || baseVal == 1 {
+		baseVal = f.Float64(10, -1, 1)
+	}
+
+	scaleFloat := math.Pow10(int(scale))
+
+	val := baseVal * math.Pow10(int(precision))
+	val = math.Trunc(val) / scaleFloat
+
+	return val
 }
 
 func random_int64(f *faker.Faker, limits ...string) int64 {

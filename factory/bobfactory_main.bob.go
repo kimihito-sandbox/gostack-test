@@ -13,6 +13,7 @@ import (
 
 type Factory struct {
 	baseGooseDBVersionMods GooseDBVersionModSlice
+	baseSessionMods        SessionModSlice
 	baseTodoMods           TodoModSlice
 	baseUserMods           UserModSlice
 }
@@ -44,6 +45,32 @@ func (f *Factory) FromExistingGooseDBVersion(m *models.GooseDBVersion) *GooseDBV
 	o.VersionID = func() int64 { return m.VersionID }
 	o.IsApplied = func() int64 { return m.IsApplied }
 	o.Tstamp = func() null.Val[time.Time] { return m.Tstamp }
+
+	return o
+}
+
+func (f *Factory) NewSession(mods ...SessionMod) *SessionTemplate {
+	return f.NewSessionWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewSessionWithContext(ctx context.Context, mods ...SessionMod) *SessionTemplate {
+	o := &SessionTemplate{f: f}
+
+	if f != nil {
+		f.baseSessionMods.Apply(ctx, o)
+	}
+
+	SessionModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingSession(m *models.Session) *SessionTemplate {
+	o := &SessionTemplate{f: f, alreadyPersisted: true}
+
+	o.Token = func() string { return m.Token }
+	o.Data = func() []byte { return m.Data }
+	o.Expiry = func() float64 { return m.Expiry }
 
 	return o
 }
@@ -110,6 +137,14 @@ func (f *Factory) ClearBaseGooseDBVersionMods() {
 
 func (f *Factory) AddBaseGooseDBVersionMod(mods ...GooseDBVersionMod) {
 	f.baseGooseDBVersionMods = append(f.baseGooseDBVersionMods, mods...)
+}
+
+func (f *Factory) ClearBaseSessionMods() {
+	f.baseSessionMods = nil
+}
+
+func (f *Factory) AddBaseSessionMod(mods ...SessionMod) {
+	f.baseSessionMods = append(f.baseSessionMods, mods...)
 }
 
 func (f *Factory) ClearBaseTodoMods() {

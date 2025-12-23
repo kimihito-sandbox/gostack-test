@@ -11,6 +11,9 @@ var (
 	// Relationship Contexts for goose_db_version
 	gooseDBVersionWithParentsCascadingCtx = newContextual[bool]("gooseDBVersionWithParentsCascading")
 
+	// Relationship Contexts for sessions
+	sessionWithParentsCascadingCtx = newContextual[bool]("sessionWithParentsCascading")
+
 	// Relationship Contexts for todos
 	todoWithParentsCascadingCtx = newContextual[bool]("todoWithParentsCascading")
 

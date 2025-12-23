@@ -11,6 +11,9 @@ var testDB bob.Transactor[bob.Tx]
 // Make sure the type GooseDBVersion runs hooks after queries
 var _ bob.HookableType = &GooseDBVersion{}
 
+// Make sure the type Session runs hooks after queries
+var _ bob.HookableType = &Session{}
+
 // Make sure the type Todo runs hooks after queries
 var _ bob.HookableType = &Todo{}
 
