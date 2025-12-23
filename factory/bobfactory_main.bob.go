@@ -14,6 +14,7 @@ import (
 type Factory struct {
 	baseGooseDBVersionMods GooseDBVersionModSlice
 	baseTodoMods           TodoModSlice
+	baseUserMods           UserModSlice
 }
 
 func New() *Factory {
@@ -75,6 +76,34 @@ func (f *Factory) FromExistingTodo(m *models.Todo) *TodoTemplate {
 	return o
 }
 
+func (f *Factory) NewUser(mods ...UserMod) *UserTemplate {
+	return f.NewUserWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewUserWithContext(ctx context.Context, mods ...UserMod) *UserTemplate {
+	o := &UserTemplate{f: f}
+
+	if f != nil {
+		f.baseUserMods.Apply(ctx, o)
+	}
+
+	UserModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingUser(m *models.User) *UserTemplate {
+	o := &UserTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int64 { return m.ID }
+	o.Email = func() string { return m.Email }
+	o.Password = func() string { return m.Password }
+	o.CreatedAt = func() time.Time { return m.CreatedAt }
+	o.UpdatedAt = func() time.Time { return m.UpdatedAt }
+
+	return o
+}
+
 func (f *Factory) ClearBaseGooseDBVersionMods() {
 	f.baseGooseDBVersionMods = nil
 }
@@ -89,4 +118,12 @@ func (f *Factory) ClearBaseTodoMods() {
 
 func (f *Factory) AddBaseTodoMod(mods ...TodoMod) {
 	f.baseTodoMods = append(f.baseTodoMods, mods...)
+}
+
+func (f *Factory) ClearBaseUserMods() {
+	f.baseUserMods = nil
+}
+
+func (f *Factory) AddBaseUserMod(mods ...UserMod) {
+	f.baseUserMods = append(f.baseUserMods, mods...)
 }

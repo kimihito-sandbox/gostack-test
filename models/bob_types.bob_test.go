@@ -13,3 +13,6 @@ var _ bob.HookableType = &GooseDBVersion{}
 
 // Make sure the type Todo runs hooks after queries
 var _ bob.HookableType = &Todo{}
+
+// Make sure the type User runs hooks after queries
+var _ bob.HookableType = &User{}

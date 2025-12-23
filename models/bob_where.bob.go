@@ -19,12 +19,15 @@ var (
 func Where[Q sqlite.Filterable]() struct {
 	GooseDBVersions gooseDBVersionWhere[Q]
 	Todos           todoWhere[Q]
+	Users           userWhere[Q]
 } {
 	return struct {
 		GooseDBVersions gooseDBVersionWhere[Q]
 		Todos           todoWhere[Q]
+		Users           userWhere[Q]
 	}{
 		GooseDBVersions: buildGooseDBVersionWhere[Q](GooseDBVersions.Columns),
 		Todos:           buildTodoWhere[Q](Todos.Columns),
+		Users:           buildUserWhere[Q](Users.Columns),
 	}
 }

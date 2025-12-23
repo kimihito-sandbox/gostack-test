@@ -13,6 +13,9 @@ var (
 
 	// Relationship Contexts for todos
 	todoWithParentsCascadingCtx = newContextual[bool]("todoWithParentsCascading")
+
+	// Relationship Contexts for users
+	userWithParentsCascadingCtx = newContextual[bool]("userWithParentsCascading")
 )
 
 // Contextual is a convienience wrapper around context.WithValue and context.Value
